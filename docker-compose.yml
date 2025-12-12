@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # 1. 数据库 (Postgres + 向量插件)
+  db:
+    image: ankane/pgvector:latest
+    container_name: ai_bot_db
+    ports:
+      - "5432:5432"  # 暴露给本机连
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: ai_social_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # 2. 消息队列 (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: ai_bot_redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  pg_data:
+
