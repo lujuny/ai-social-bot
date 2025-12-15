@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { CopyOutlined, EditOutlined, CheckCircleOutlined, CloseOutlined, SaveOutlined } from '@ant-design/icons';
+import { CopyOutlined, EditOutlined, CheckCircleOutlined, CloseOutlined, SaveOutlined, SendOutlined } from '@ant-design/icons';
 
 const DraftPanel = () => {
     const [drafts, setDrafts] = useState([]);
-    
+
     // === 新增状态：控制弹窗和编辑 ===
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentDraft, setCurrentDraft] = useState(null); // 当前正在编辑的草稿对象
     const [editTitle, setEditTitle] = useState("");
     const [editContent, setEditContent] = useState("");
+    const [accounts, setAccounts] = useState([]); // 新增：账号列表
 
     const fetchDrafts = async () => {
         try {
@@ -20,9 +21,70 @@ const DraftPanel = () => {
         }
     };
 
+    const fetchAccounts = async () => {
+        try {
+            const res = await axios.get('http://localhost:8000/api/v1/accounts/list');
+            setAccounts(res.data);
+        } catch (error) {
+            console.error("获取账号列表失败");
+        }
+    };
+
     useEffect(() => {
         fetchDrafts();
+        fetchAccounts();
     }, []);
+
+    // ... (中间代码不变) ...
+
+    // === 新增：发布流程 ===
+    const handlePublish = async (draft, e) => {
+        e.stopPropagation(); // 阻止冒泡触发双击编辑
+
+        // 简单处理：默认选取第一个有效的小红书账号
+        const validAccount = accounts.find(a => a.platform === 'xhs' && a.status === 'active');
+        if (!validAccount) {
+            alert("❌ 未找到可用的账号，请先去 [账号与分发] 页面绑定！");
+            return;
+        }
+
+        if (!window.confirm(`确定要使用账号 [${validAccount.account_name}] 发布这篇笔记吗？`)) return;
+
+        try {
+            alert("🚀 正在调用浏览器自动发布，请观察后端控制台或弹出的浏览器窗口...");
+            await axios.post(`http://localhost:8000/api/v1/publish/now?draft_id=${draft.id}&account_id=${validAccount.id}`);
+            alert("✅ 发布成功！");
+            fetchDrafts();
+        } catch (error) {
+            console.error(error);
+            alert("❌ 发布失败: " + (error.response?.data?.detail || "未知错误"));
+        }
+    };
+
+    // ... (rest of code) ...
+    // 在渲染部分修改 footerStyle 内容
+
+    // ...
+    //   <div style={footerStyle}>
+    //      <div>
+    //         {d.status === 'published' ? (
+    //             <span style={{ color: '#1677ff', fontWeight: 'bold' }}>🚀 已发布</span>
+    //         ) : (
+    //             <span style={{ color: '#52c41a' }}><CheckCircleOutlined /> 已生成</span>
+    //         )}
+    //      </div>
+    //      <div>
+    //          <button 
+    //              style={{...actionBtnStyle, color: d.status === 'published' ? '#ccc' : '#fa8c16'}} 
+    //              title="一键发布" 
+    //              disabled={d.status === 'published'}
+    //              onClick={(e) => handlePublish(d, e)}>
+    //              <SendOutlined /> 发布
+    //          </button>
+    //          <button style={actionBtnStyle} title="编辑" onClick={() => openEditModal(d)}><EditOutlined /></button>
+    //      </div>
+    //   </div>
+
 
     // === 打开编辑弹窗 ===
     const openEditModal = (draft) => {
@@ -67,26 +129,39 @@ const DraftPanel = () => {
                     <p style={{ color: '#999' }}>暂无草稿，请去"热点池"生成几篇吧！</p>
                 ) : (
                     drafts.map((d) => (
-                        <div 
-                            key={d.id} 
+                        <div
+                            key={d.id}
                             style={cardStyle}
                             onDoubleClick={() => openEditModal(d)} // 👈 绑定双击事件
                             title="双击查看详情/编辑"
                         >
                             <div style={headerStyle}>
-                                <span className={`badge xhs`} style={{background: '#ff2442', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px'}}>小红书</span>
+                                <span className={`badge xhs`} style={{ background: '#ff2442', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>小红书</span>
                                 <span style={{ fontSize: '12px', color: '#999' }}>{new Date(d.created_at).toLocaleDateString()}</span>
                             </div>
-                            
+
                             <h3 style={{ margin: '10px 0', fontSize: '16px' }}>{d.title}</h3>
-                            
+
                             <p style={{ fontSize: '14px', color: '#666', lineHeight: '1.6', height: '80px', overflow: 'hidden' }}>
                                 {d.content.slice(0, 100)}...
                             </p>
 
                             <div style={footerStyle}>
-                                <span style={{ color: '#52c41a' }}><CheckCircleOutlined /> 已生成</span>
                                 <div>
+                                    {d.status === 'published' ? (
+                                        <span style={{ color: '#1677ff', fontWeight: 'bold' }}>🚀 已发布</span>
+                                    ) : (
+                                        <span style={{ color: '#52c41a' }}><CheckCircleOutlined /> 已生成</span>
+                                    )}
+                                </div>
+                                <div>
+                                    <button
+                                        style={{ ...actionBtnStyle, color: d.status === 'published' ? '#ccc' : '#fa8c16' }}
+                                        title="一键发布"
+                                        disabled={d.status === 'published'}
+                                        onClick={(e) => handlePublish(d, e)}>
+                                        <SendOutlined /> 发布
+                                    </button>
                                     <button style={actionBtnStyle} title="编辑" onClick={() => openEditModal(d)}><EditOutlined /></button>
                                 </div>
                             </div>
@@ -101,21 +176,21 @@ const DraftPanel = () => {
                     <div style={modalContentStyle}>
                         <div style={modalHeaderStyle}>
                             <h3>✏️ 编辑草稿</h3>
-                            <button onClick={closeEditModal} style={{background:'none', border:'none', cursor:'pointer', fontSize:'18px'}}><CloseOutlined /></button>
+                            <button onClick={closeEditModal} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}><CloseOutlined /></button>
                         </div>
-                        
+
                         <div style={modalBodyStyle}>
                             <label style={labelStyle}>标题</label>
-                            <input 
-                                type="text" 
-                                value={editTitle} 
+                            <input
+                                type="text"
+                                value={editTitle}
                                 onChange={(e) => setEditTitle(e.target.value)}
                                 style={inputStyle}
                             />
-                            
+
                             <label style={labelStyle}>正文内容</label>
-                            <textarea 
-                                value={editContent} 
+                            <textarea
+                                value={editContent}
                                 onChange={(e) => setEditContent(e.target.value)}
                                 style={textareaStyle}
                             />

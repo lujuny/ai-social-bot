@@ -76,3 +76,93 @@ def update_draft(draft_id: int, payload: UpdateDraftRequest, db: Session = Depen
         return {"status": "success", "message": "更新成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================================
+# 👇 Module 3: 分发调度模块 (Distributor) 接口
+# ==========================================
+from app.models import SocialAccount, PublishLog
+from app.services.distributor.account_manager import AccountManager
+from app.services.distributor.xhs_publisher import XhsPublisher
+
+@router.get("/accounts/list")
+def get_accounts(db: Session = Depends(get_db)):
+    """获取所有绑定的社交账号"""
+    manager = AccountManager(db)
+    return manager.get_accounts()
+
+@router.post("/accounts/bind/{platform}")
+async def bind_account(platform: str, db: Session = Depends(get_db)):
+    """
+    绑定新账号 (启动浏览器扫码)
+    注意：这是阻塞操作，会弹窗等待。
+    """
+    manager = AccountManager(db)
+    result = await manager.login_qrcode(platform)
+    if result['status'] == 'failed':
+        raise HTTPException(status_code=500, detail=result['error'])
+    return result
+
+@router.post("/publish/now")
+def publish_content(draft_id: int, account_id: int, db: Session = Depends(get_db)):
+    """
+    立即发布某个草稿
+    """
+    # 1. 获取草稿
+    draft = db.query(ContentDraft).filter(ContentDraft.id == draft_id).first()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+
+    # 2. 获取账号
+    account = db.query(SocialAccount).filter(SocialAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    # 3. 实例化发布器
+    try:
+        publisher = None
+        if account.platform == 'xhs':
+            publisher = XhsPublisher(account)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported platform")
+
+        # 4. 执行发布
+        # 构造 content_data
+        # 注意：这里还没有图片，暂时只发纯文本，或者需要 Mock 一个图片路径
+        content_data = {
+            "title": draft.title,
+            "content": draft.content,
+            "tags": draft.tags,
+            "images": [] # TODO: 未来从 draft 或者 OSS 获取图片
+        }
+
+        status = publisher.publish(content_data)
+
+        # 5. 记录日志
+        log = PublishLog(
+            draft_id=draft.id,
+            platform=account.platform,
+            publish_status=status,
+            remote_post_id="unknown", # 暂时没拿
+            error_msg="" if status=="success" else "Unknown error"
+        )
+        db.add(log)
+        
+        # 更新草稿状态
+        if status == "success":
+            draft.status = "published"
+        
+        db.commit()
+        return {"status": status}
+
+    except Exception as e:
+        # 记录失败日志
+        log = PublishLog(
+            draft_id=draft.id,
+            platform=account.platform,
+            publish_status="failed",
+            error_msg=str(e)
+        )
+        db.add(log)
+        db.commit()
+        raise HTTPException(status_code=500, detail=str(e))
