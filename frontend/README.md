@@ -1,73 +1,144 @@
-# React + TypeScript + Vite
+# AI社交媒体机器人 - 前端界面
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+这是一个现代化的AI社交媒体机器人管理系统的前端界面，基于React + TypeScript + Tailwind CSS构建。
 
-Currently, two official plugins are available:
+## 功能特性
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 六大核心模块
 
-## React Compiler
+1. **仪表盘** - 系统概览和数据统计
+2. **配置与账号中台** - 多平台账号管理、人设配置、知识库
+3. **趋势感知与决策引擎** - 实时热点监控、智能选题
+4. **多模态内容生产工厂** - AI生成文案、图片、视频
+5. **自动化分发矩阵** - 一键发布到多平台
+6. **数据归因与分析中心** - 深度分析、AI诊断
+7. **自优化闭环核心** - 智能优化、A/B测试
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 技术栈
 
-## Expanding the ESLint configuration
+- **框架**: React 19 + TypeScript
+- **构建工具**: Vite
+- **样式**: Tailwind CSS
+- **路由**: React Router v6
+- **图标**: Heroicons + Lucide React
+- **图表**: Recharts
+- **UI组件**: Headless UI
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 快速开始
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 安装依赖
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 开发模式
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+应用将在 http://localhost:5173 启动
+
+### 构建生产版本
+
+```bash
+npm run build
+```
+
+### 预览生产版本
+
+```bash
+npm run preview
+```
+
+## 项目结构
+
+```
+src/
+├── components/          # 通用组件
+│   └── Layout/         # 布局组件
+├── pages/              # 页面组件
+│   ├── Dashboard.tsx   # 仪表盘
+│   ├── Accounts.tsx    # 配置与账号中台
+│   ├── Trends.tsx      # 趋势感知与决策
+│   ├── Content.tsx     # 内容生产工厂
+│   ├── Distribution.tsx # 分发矩阵
+│   ├── Analytics.tsx   # 数据分析中心
+│   └── Optimization.tsx # 自优化闭环
+├── types/              # TypeScript类型定义
+└── App.tsx            # 应用入口
+```
+
+## 主要功能说明
+
+### 1. 仪表盘
+- 实时数据统计展示
+- 发布趋势图表
+- 热门内容排行
+- 系统活动日志
+
+### 2. 配置与账号中台
+- 多平台账号管理（抖音、小红书、知乎等）
+- 人设配置与Prompt管理
+- RAG知识库构建
+- 账号分组与权限管理
+
+### 3. 趋势感知与决策引擎
+- 全网热点实时监控
+- 智能话题匹配评分
+- 选题策略生成
+- 竞对数据跟踪
+
+### 4. 多模态内容生产工厂
+- AI文案生成
+- 图片/视频自动生成
+- 内容包管理
+- 生产进度监控
+
+### 5. 自动化分发矩阵
+- 一键多平台发布
+- 智能排期管理
+- 发布历史追踪
+- 成功率统计
+
+### 6. 数据归因与分析中心
+- 跨平台数据聚合
+- AI智能诊断
+- 性能归因分析
+- 优化建议生成
+
+### 7. 自优化闭环核心
+- 自动规则优化
+- A/B测试实验
+- 效果评估学习
+- 策略迭代更新
+
+## 开发说明
+
+### 样式系统
+使用Tailwind CSS构建响应式设计，定义了统一的组件样式类：
+- `.btn` - 按钮基础样式
+- `.btn-primary` - 主要按钮
+- `.btn-secondary` - 次要按钮
+- `.card` - 卡片组件
+- `.input` - 输入框
+
+### 图标系统
+使用Heroicons和Lucide React图标库，保持界面风格统一。
+
+### 响应式设计
+所有界面都采用响应式设计，支持桌面端和移动端访问。
+
+## 后续开发计划
+
+1. [ ] 实现与后端API的数据对接
+2. [ ] 添加实时数据推送功能
+3. [ ] 优化移动端体验
+4. [ ] 添加更多图表类型
+5. [ ] 实现主题切换功能
+6. [ ] 添加国际化支持
+
+## 许可证
+
+MIT License
