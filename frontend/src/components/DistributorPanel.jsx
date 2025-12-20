@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { UserAddOutlined, QrcodeOutlined, CheckCircleOutlined, SyncOutlined } from '@ant-design/icons';
+import { UserAddOutlined, QrcodeOutlined, CheckCircleOutlined, SyncOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const DistributorPanel = () => {
     const [accounts, setAccounts] = useState([]);
@@ -34,6 +34,18 @@ const DistributorPanel = () => {
             alert("绑定失败或超时");
         }
         setBinding(false);
+    };
+
+    const handleUnbind = async (id, name) => {
+        if (!window.confirm(`确认要解绑账号 [${name}] 吗？`)) return;
+        try {
+            await axios.delete(`http://localhost:8000/api/v1/accounts/${id}`);
+            alert("✅ 解绑成功！");
+            fetchAccounts();
+        } catch (error) {
+            console.error(error);
+            alert("解绑失败");
+        }
     };
 
     return (
@@ -74,6 +86,7 @@ const DistributorPanel = () => {
                                     <th style={{ padding: '10px', borderBottom: '1px solid #eee' }}>账号标识</th>
                                     <th style={{ padding: '10px', borderBottom: '1px solid #eee' }}>状态</th>
                                     <th style={{ padding: '10px', borderBottom: '1px solid #eee' }}>最后检查</th>
+                                    <th style={{ padding: '10px', borderBottom: '1px solid #eee' }}>操作</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -89,6 +102,15 @@ const DistributorPanel = () => {
                                         </td>
                                         <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
                                             {new Date(acc.last_checked_at).toLocaleString()}
+                                        </td>
+                                        <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
+                                            <button
+                                                onClick={() => handleUnbind(acc.id, acc.account_name)}
+                                                style={{ border: 'none', background: 'none', color: '#ff4d4f', cursor: 'pointer' }}
+                                                title="解绑/删除"
+                                            >
+                                                <DeleteOutlined /> 解绑
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}

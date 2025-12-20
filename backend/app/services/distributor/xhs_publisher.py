@@ -47,39 +47,81 @@ class XhsPublisher(BasePublisher):
             # 这里假设上传 Tabs 默认选中 "图文"
             
             # 寻找上传输入框
+            # 2. 上传图片
+            # 寻找上传输入框
             if content_data.get("images"):
-                with page.expect_file_chooser() as fc_info:
-                    # 点击上传区域，这里 selector 比较模糊，通常是 class 包含 upload 的 div
-                    # 我们尝试直接定位 input
-                    # 如果页面没有直接展示 input，用 dispatch_event 或者 click 触发
-                    # 也可以尝试 page.locator("input[type='file']").set_input_files(...)
-                    
-                    # 尝试方案 A: 寻找可视的上传按钮点击
-                    # page.click(".upload-input") 
-                    
-                    # 尝试方案 B: 直接操作 hidden input (推荐)
-                    page.locator("input[type='file']").set_input_files(content_data['images'])
+                try:
+                    # 尝试定位 input type=file
+                    # 如果页面有多个，通常第一个是上传图片
+                    upload_input = page.locator("input[type='file']").first
+                    upload_input.set_input_files(content_data['images'])
+                    # 等待图片上传处理完成 (简单等待)
+                    page.wait_for_timeout(3000)
+                except Exception as e:
+                    print(f"Image upload failed: {e}")
 
             # 3. 填写标题
-            # placeholder="填写标题，会展示在封面图下方"
-            page.locator("input[placeholder*='填写标题']").fill(content_data['title'])
+            # 尝试多种选择器以防页面变动
+            try:
+                # 常见: input class="d-input" 或者 placeholder 包含标题
+                title_selector = "input[placeholder*='填写标题']"
+                if not page.is_visible(title_selector):
+                    title_selector = ".c-input_inner" # 另一种可能
+                
+                page.locator(title_selector).first.fill(content_data['title'])
+            except Exception as e:
+                print(f"Title fill failed: {e}")
 
             # 4. 填写正文
-            # contenteditable 或者是 textarea
-            # 小红书正文通常是 #post-textarea
-            page.locator(".ql-editor").fill(content_data['content'] + "\n\n" + content_data.get('tags', ''))
+            # 通常是 #post-textarea
+            try:
+                content_selector = "#post-textarea"
+                if not page.is_visible(content_selector):
+                    content_selector = ".ql-editor" #为了兼容旧版
+                
+                full_content = content_data['content']
+                if content_data.get('tags'):
+                     full_content += f"\n\n{content_data['tags']}"
+                
+                page.locator(content_selector).fill(full_content)
+            except Exception as e:
+                print(f"Content fill failed: {e}")
 
             # 5. 点击发布
-            # 寻找 "发布" 按钮
-            submit_btn = page.locator("button:has-text('发布')")
-            submit_btn.click()
+            try:
+                # 寻找 "发布" 按钮
+                # class通常包含 publishBtn
+                submit_btn = page.locator(".publishBtn").first
+                if not submit_btn.is_visible():
+                     submit_btn = page.locator("button:has-text('发布')")
+                
+                submit_btn.click()
+            except Exception as e:
+                print(f"Click publish failed: {e}")
 
             # 6. 等待成功
             # 成功后通常弹出 Toast "发布成功" 或者跳转到管理页
+            # 关键修改：大幅增加超时时间 (如 5分钟 300000ms)，允许用户手动处理验证码或调整内容
             try:
-                page.wait_for_selector("text=发布成功", timeout=10000)
+                # 尝试等待 "发布成功" 提示
+                # 也可以同时监听 URL 变化，例如跳转到 /manage/works
+                # 但 Playwright 的 wait_for_* 通常是阻塞的，简单起见等待最关键的信号
+                print("Waiting for success signal (Timeout: 300s)...")
+                page.wait_for_selector("text=发布成功", timeout=300000) 
+                
+                # 稍微等待一下让用户看清
+                page.wait_for_timeout(2000)
+                
                 browser.close()
                 return "success"
-            except:
+            except Exception as e:
+                print(f"Wait for success failed: {e}")
+                # 如果超时或被手动关闭，则视为状态未知或失败
+                # 尝试截图
+                try:
+                    page.screenshot(path="publish_timeout.png")
+                except:
+                    pass
+                    
                 browser.close()
                 return "unknown_status"

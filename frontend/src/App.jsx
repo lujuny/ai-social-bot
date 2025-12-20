@@ -3,7 +3,8 @@ import { useState } from 'react';
 import TrendPanel from './components/TrendPanel';
 import DraftPanel from './components/DraftPanel';
 import DistributorPanel from './components/DistributorPanel';
-import { FireOutlined, FileTextOutlined, SendOutlined } from '@ant-design/icons';
+import PublishedPanel from './components/PublishedPanel';
+import { FireOutlined, FileTextOutlined, SendOutlined, TrophyOutlined } from '@ant-design/icons';
 import './App.css';
 
 function App() {
@@ -33,6 +34,12 @@ function App() {
         >
           <SendOutlined /> 账号与分发 (Distributor)
         </div>
+        <div
+          onClick={() => setActiveTab('published')}
+          style={activeTab === 'published' ? activeTabStyle : tabStyle}
+        >
+          <TrophyOutlined /> 已发布 (Archive)
+        </div>
       </div>
 
       {/* 内容区域：根据当前 Tab 显示不同组件 */}
@@ -40,6 +47,7 @@ function App() {
         {activeTab === 'trends' && <TrendPanel />}
         {activeTab === 'drafts' && <DraftPanel />}
         {activeTab === 'distributor' && <DistributorPanel />}
+        {activeTab === 'published' && <PublishedPanel />}
       </div>
 
     </div>

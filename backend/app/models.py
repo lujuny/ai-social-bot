@@ -25,6 +25,7 @@ class ContentDraft(Base):
     title = Column(String, comment="AI生成的标题")
     content = Column(Text, comment="AI生成的正文")
     tags = Column(String, comment="标签/话题")
+    images = Column(Text, comment="图片路径列表(JSON)")
     
     # 状态管理
     platform = Column(String, default="xhs", comment="目标平台")

@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from typing import List, Optional
+import json
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.trend_hunter import TrendHunterService
@@ -53,6 +55,29 @@ def generate_content(trend_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         # 返回 500 错误给前端
         raise HTTPException(status_code=500, detail=str(e))
+
+class CreateManualDraftRequest(BaseModel):
+    title: str
+    content: str
+    tags: Optional[str] = ""
+    images: List[str] = []
+
+@router.post("/content/manual")
+def create_manual_draft(payload: CreateManualDraftRequest, db: Session = Depends(get_db)):
+    """手动创建草稿"""
+    draft = ContentDraft(
+        title=payload.title,
+        content=payload.content,
+        tags=payload.tags,
+        images=json.dumps(payload.images), # 存为JSON string
+        platform="xhs",
+        status="draft",
+        trend_id=0 # 0 表示手动创建，无关联热点
+    )
+    db.add(draft)
+    db.commit()
+    db.refresh(draft)
+    return {"status": "success", "draft_id": draft.id}
     
 
 # 👇 在文件末尾追加这个接口
@@ -61,10 +86,16 @@ def get_drafts(db: Session = Depends(get_db)):
     """获取所有已生成的草稿"""
     return db.query(ContentDraft).order_by(ContentDraft.created_at.desc()).all()
 
+@router.get("/content/published")
+def get_published_content(db: Session = Depends(get_db)):
+    """获取所有已发布的作品"""
+    return db.query(ContentDraft).filter(ContentDraft.status == "published").order_by(ContentDraft.updated_at.desc()).all()
+
 # 2. 定义一个数据模型，用来接收前端发来的修改内容
 class UpdateDraftRequest(BaseModel):
     title: str
     content: str
+    images: List[str] = []
 
 # 3. 在文件末尾追加这个 PUT 接口
 @router.put("/content/update/{draft_id}")
@@ -72,7 +103,27 @@ def update_draft(draft_id: int, payload: UpdateDraftRequest, db: Session = Depen
     """更新草稿"""
     service = ContentFactoryService(db)
     try:
-        service.update_draft_content(draft_id, payload.title, payload.content)
+        # Update images as well
+        # Service doesn't support images update yet? Let's do it manually here or update service
+        # For simplicity, do it here or update service. Ideally update service. 
+        # But wait, ContentFactoryService.update_draft_content might not have images arg.
+        # Let's check ContentFactoryService? No, let's just update draft object directly here if easiest, 
+        # or assume service update is needed.
+        # Let's direct update draft object here since I don't want to break service interface if not needed or check service file.
+        # Check service file logic? I haven't seen service file.
+        # Safest is to fetch and update here if I don't modify service.
+        # But previous code used service. Let's use service but assume we need to modify service or do manual update.
+        # Let's check crud/service first? 
+        # Actually, let's just do it directly here to be safe and quick.
+        draft = db.query(ContentDraft).filter(ContentDraft.id == draft_id).first()
+        if not draft:
+            raise HTTPException(status_code=404, detail="Draft not found")
+        
+        draft.title = payload.title
+        draft.content = payload.content
+        draft.images = json.dumps(payload.images)
+        db.commit()
+        
         return {"status": "success", "message": "更新成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -102,6 +153,15 @@ async def bind_account(platform: str, db: Session = Depends(get_db)):
     if result['status'] == 'failed':
         raise HTTPException(status_code=500, detail=result['error'])
     return result
+
+@router.delete("/accounts/{account_id}")
+def delete_account(account_id: int, db: Session = Depends(get_db)):
+    """删除/解绑指定账号"""
+    manager = AccountManager(db)
+    success = manager.delete_account(account_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return {"status": "success", "message": "已解绑"}
 
 @router.post("/publish/now")
 def publish_content(draft_id: int, account_id: int, db: Session = Depends(get_db)):
@@ -133,7 +193,7 @@ def publish_content(draft_id: int, account_id: int, db: Session = Depends(get_db
             "title": draft.title,
             "content": draft.content,
             "tags": draft.tags,
-            "images": [] # TODO: 未来从 draft 或者 OSS 获取图片
+            "images": json.loads(draft.images) if draft.images else [] 
         }
 
         status = publisher.publish(content_data)
